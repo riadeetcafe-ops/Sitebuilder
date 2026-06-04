@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Website Builder — maakeen.site</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Instrument+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0f0f0f;
+    --bg2: #181818;
+    --bg3: #222;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.15);
+    --text: #f0ede8;
+    --text2: #888;
+    --text3: #444;
+    --accent: #ff5c00;
+    --accent-glow: rgba(255,92,0,0.15);
+    --green: #00c97a;
+  }
+
+  html, body { height: 100%; overflow: hidden; }
+
+  body {
+    font-family: 'Instrument Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* TOPBAR */
+  #topbar {
+    height: 50px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 16px;
+    color: var(--text);
+    text-decoration: none;
+    letter-spacing: -0.03em;
+    white-space: nowrap;
+  }
+  .logo span { color: var(--accent); }
+
+  .topbar-divider {
+    width: 1px;
+    height: 20px;
+    background: var(--border2);
+  }
+
+  #site-name {
+    font-size: 13px;
+    color: var(--text2);
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .topbar-actions {
+    display: flex;
+    gap: 8px;
+    margin-left: auto;
+  }
+
+  .btn-sm {
+    height: 32px;
+    padding: 0 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border2);
+    background: transparent;
+    color: var(--text2);
+    font-size: 13px;
+    font-family: 'Instrument Sans', sans-serif;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .btn-sm:hover { border-color: var(--text2); color: var(--text); }
+  .btn-sm:disabled { opacity: 0.3; cursor: not-allowed; }
+  .btn-sm.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn-sm.primary:hover { background: #ff7a2e; }
+
+  /* MAIN */
+  #main {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+  }
+
+  /* SIDEBAR */
+  #sidebar {
+    width: 320px;
+    min-width: 320px;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--border);
+  }
+
+  #sidebar-top {
+    padding: 14px 16px 10px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  #sidebar-top h2 {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text3);
+  }
+
+  /* MESSAGES */
+  #messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--bg3) transparent;
+  }
+
+  .msg {
+    max-width: 88%;
+    padding: 10px 14px;
+    border-radius: 14px;
+    font-size: 14px;
+    line-height: 1.55;
+    animation: popIn 0.2s ease;
+  }
+
+  @keyframes popIn {
+    from { opacity: 0; transform: translateY(8px) scale(0.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .msg.user {
+    align-self: flex-end;
+    background: var(--accent);
+    color: #fff;
+    border-bottom-right-radius: 4px;
+  }
+
+  .msg.ai {
+    align-self: flex-start;
+    background: var(--bg3);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-bottom-left-radius: 4px;
+  }
+
+  .msg.ai.muted { color: var(--text2); }
+
+  .typing {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    padding: 14px 16px;
+  }
+
+  .typing span {
+    width: 5px; height: 5px;
+    background: var(--text3);
+    border-radius: 50%;
+    animation: bounce 1.2s infinite;
+  }
+  .typing span:nth-child(2) { animation-delay: 0.15s; }
+  .typing span:nth-child(3) { animation-delay: 0.3s; }
+
+  @keyframes bounce {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+    30% { transform: translateY(-5px); opacity: 1; }
+  }
+
+  /* SUGGESTIONS */
+  #suggestions {
+    padding: 0 12px 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+
+  .sugg {
+    font-size: 12px;
+    padding: 5px 10px;
+    border-radius: 20px;
+    border: 1px solid var(--border2);
+    background: transparent;
+    color: var(--text2);
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: 'Instrument Sans', sans-serif;
+  }
+  .sugg:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-glow); }
+
+  /* INPUT */
+  #input-area {
+    padding: 12px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+  }
+
+  #user-input {
+    flex: 1;
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    border-radius: 12px;
+    padding: 10px 14px;
+    font-size: 14px;
+    font-family: 'Instrument Sans', sans-serif;
+    color: var(--text);
+    resize: none;
+    min-height: 42px;
+    max-height: 120px;
+    outline: none;
+    line-height: 1.5;
+    transition: border-color 0.15s;
+  }
+  #user-input:focus { border-color: var(--accent); }
+  #user-input::placeholder { color: var(--text3); }
+
+  #send-btn {
+    width: 42px; height: 42px;
+    border-radius: 12px;
+    background: var(--accent);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: opacity 0.15s, transform 0.1s;
+  }
+  #send-btn:hover { opacity: 0.85; }
+  #send-btn:active { transform: scale(0.94); }
+  #send-btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none; }
+
+  /* PREVIEW */
+  #preview {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  #browser-bar {
+    height: 44px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+
+  .traffic-lights { display: flex; gap: 6px; }
+  .tl {
+    width: 11px; height: 11px;
+    border-radius: 50%;
+    border: 1px solid rgba(0,0,0,0.2);
+  }
+  .tl.r { background: #ff5f57; }
+  .tl.y { background: #febc2e; }
+  .tl.g { background: #28c840; }
+
+  #url-display {
+    flex: 1;
+    height: 28px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    gap: 6px;
+    max-width: 420px;
+    margin: 0 auto;
+    overflow: hidden;
+  }
+
+  #url-display svg { color: var(--text3); flex-shrink: 0; }
+  #url-text { font-size: 12px; color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* LOADING BAR */
+  #loading-bar {
+    height: 2px;
+    background: transparent;
+    position: relative;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+
+  #loading-bar.active { background: var(--bg3); }
+
+  #loading-fill {
+    height: 100%;
+    background: var(--accent);
+    width: 0%;
+    transition: width 0.4s ease;
+    border-radius: 0 2px 2px 0;
+  }
+
+  /* PREVIEW CONTENT */
+  #preview-content {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    background: #fff;
+  }
+
+  #preview-iframe {
+    width: 100%; height: 100%;
+    border: none;
+    display: none;
+  }
+
+  /* EMPTY STATE */
+  #empty-state {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    background: var(--bg2);
+    padding: 32px;
+  }
+
+  .empty-icon {
+    width: 72px; height: 72px;
+    border-radius: 20px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+  }
+
+  #empty-state h3 {
+    font-family: 'Syne', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+    text-align: center;
+    letter-spacing: -0.02em;
+  }
+
+  #empty-state p {
+    font-size: 14px;
+    color: var(--text2);
+    text-align: center;
+    max-width: 320px;
+    line-height: 1.6;
+  }
+
+  .empty-examples {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    max-width: 420px;
+  }
+
+  .empty-pill {
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    border-radius: 100px;
+    padding: 8px 16px;
+    font-size: 13px;
+    color: var(--text2);
+    cursor: pointer;
+    font-family: 'Instrument Sans', sans-serif;
+    transition: all 0.15s;
+  }
+  .empty-pill:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-glow); }
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <a href="/index.html" class="logo">maak<span>een</span>.site</a>
+  <div class="topbar-divider"></div>
+  <span id="site-name">Nieuwe website</span>
+  <div class="topbar-actions">
+    <button class="btn-sm" id="new-btn" onclick="newSite()">+ Nieuw</button>
+    <button class="btn-sm primary" id="download-btn" disabled onclick="downloadSite()">↓ Download</button>
+  </div>
+</div>
+
+<div id="main">
+  <div id="sidebar">
+    <div id="sidebar-top">
+      <h2>Assistent</h2>
+    </div>
+    <div id="messages">
+      <div class="msg ai">Hoi! Beschrijf de website die je wilt maken. Typ hieronder wat je in gedachten hebt.</div>
+    </div>
+    <div id="suggestions">
+      <button class="sugg" data-text="Maak de kleuren donkerder">Donkerder</button>
+      <button class="sugg" data-text="Voeg een contactformulier toe">+ Contactformulier</button>
+      <button class="sugg" data-text="Maak het design moderner">Moderner</button>
+      <button class="sugg" data-text="Voeg meer content toe aan de pagina">+ Meer content</button>
+    </div>
+    <div id="input-area">
+      <textarea id="user-input" placeholder="Beschrijf je website..." rows="1"></textarea>
+      <button id="send-btn" aria-label="Verstuur" onclick="sendMessage()">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M8 12V4M4 8l4-4 4 4" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <div id="preview">
+    <div id="browser-bar">
+      <div class="traffic-lights">
+        <div class="tl r"></div>
+        <div class="tl y"></div>
+        <div class="tl g"></div>
+      </div>
+      <div id="url-display">
+        <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+          <circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1.2"/>
+          <path d="M6 1v10M1 6h10M2 3.5c1 .7 2.5 1.1 4 1.1s3-.4 4-1.1M2 8.5c1-.7 2.5-1.1 4-1.1s3 .4 4 1.1" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/>
+        </svg>
+        <span id="url-text">jouw-website.html</span>
+      </div>
+    </div>
+    <div id="loading-bar"><div id="loading-fill"></div></div>
+    <div id="preview-content">
+      <iframe id="preview-iframe" sandbox="allow-scripts" title="Website preview"></iframe>
+      <div id="empty-state">
+        <div class="empty-icon">🌐</div>
+        <h3>Wat wil je maken?</h3>
+        <p>Typ links een beschrijving en je website verschijnt hier binnen 10 seconden.</p>
+        <div class="empty-examples">
+          <button class="empty-pill" onclick="quickStart('Een website voor mijn bakkerij in Amsterdam met menu en openingstijden')">🥐 Bakkerij</button>
+          <button class="empty-pill" onclick="quickStart('Een portfolio voor een fotograaf met galerij en contactpagina')">📸 Portfolio</button>
+          <button class="empty-pill" onclick="quickStart('Een landingspagina voor een fitness app met prijzen en reviews')">💪 Fitness app</button>
+          <button class="empty-pill" onclick="quickStart('Een persoonlijke website met bio, skills en social media links')">✨ Persoonlijk</button>
+          <button class="empty-pill" onclick="quickStart('Een website voor een luxe restaurant met menu en reserveringsknop')">🍽️ Restaurant</button>
+          <button class="empty-pill" onclick="quickStart('Een website voor een kapper met diensten en online afspraken')">✂️ Kapper</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SYSTEM_PROMPT = `Je bent een expert webdesigner. De gebruiker beschrijft een website en jij genereert ALLEEN een complete, prachtige HTML-pagina. Geen uitleg, geen markdown, geen codeblokken.
+
+Begin direct met <!DOCTYPE html>.
+
+Eisen:
+- Gebruik Google Fonts (laad via @import in <style>)
+- Alle CSS inline in een <style> tag
+- Prachtig, professioneel en modern design
+- Onderscheidend kleurenpalet (niet generiek blauw/wit)
+- Bevat: navigatiebalk, hero sectie, 2-3 content secties, footer
+- Subtiele CSS-animaties en hover-effecten
+- Volledig responsive met media queries
+- Realistische placeholder-content op basis van de beschrijving
+- Geen externe afbeeldingen — gebruik CSS-gradiënten, SVG of emoji
+- Moet eruitzien als een echte, afgewerkte website
+
+Bij aanpassingen: geef de COMPLETE bijgewerkte HTML terug.`;
+
+let history = [];
+let currentHTML = '';
+let siteName = 'jouw-website';
+
+// Check for startPrompt from landing page
+window.addEventListener('load', () => {
+  const prompt = localStorage.getItem('startPrompt');
+  if (prompt) {
+    localStorage.removeItem('startPrompt');
+    setTimeout(() => sendMessage(prompt), 300);
+  }
+});
+
+const messagesEl = document.getElementById('messages');
+const inputEl = document.getElementById('user-input');
+const sendBtn = document.getElementById('send-btn');
+const iframe = document.getElementById('preview-iframe');
+const emptyState = document.getElementById('empty-state');
+const urlText = document.getElementById('url-text');
+const downloadBtn = document.getElementById('download-btn');
+const loadingBar = document.getElementById('loading-bar');
+const loadingFill = document.getElementById('loading-fill');
+const siteNameEl = document.getElementById('site-name');
+
+function addMsg(text, role, muted = false) {
+  const div = document.createElement('div');
+  div.className = `msg ${role}${muted ? ' muted' : ''}`;
+  div.textContent = text;
+  messagesEl.appendChild(div);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+  return div;
+}
+
+function showTyping() {
+  const div = document.createElement('div');
+  div.className = 'msg ai';
+  div.id = 'typing-indicator';
+  div.innerHTML = '<div class="typing"><span></span><span></span><span></span></div>';
+  messagesEl.appendChild(div);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+  return div;
+}
+
+function startLoading() {
+  loadingBar.classList.add('active');
+  loadingFill.style.width = '0%';
+  let p = 0;
+  const iv = setInterval(() => {
+    p += Math.random() * 10;
+    if (p > 80) { clearInterval(iv); p = 80; }
+    loadingFill.style.width = p + '%';
+  }, 400);
+  return iv;
+}
+
+function stopLoading(iv) {
+  clearInterval(iv);
+  loadingFill.style.width = '100%';
+  setTimeout(() => {
+    loadingBar.classList.remove('active');
+    loadingFill.style.width = '0%';
+  }, 500);
+}
+
+function slugify(text) {
+  return text.toLowerCase()
+    .replace(/een website voor/gi, '').replace(/een /gi, '').replace(/mijn /gi, '')
+    .replace(/[^a-z0-9\s]/g, '').trim().replace(/\s+/g, '-').slice(0, 30) || 'website';
+}
+
+function updatePreview(html) {
+  iframe.srcdoc = html;
+  iframe.style.display = 'block';
+  emptyState.style.display = 'none';
+  currentHTML = html;
+}
+
+async function sendMessage(overrideText) {
+  const text = overrideText || inputEl.value.trim();
+  if (!text) return;
+
+  sendBtn.disabled = true;
+  inputEl.disabled = true;
+
+  addMsg(text, 'user');
+  if (!overrideText) { inputEl.value = ''; inputEl.style.height = 'auto'; }
+
+  if (history.length === 0) {
+    siteName = slugify(text);
+    urlText.textContent = siteName + '.html';
+    siteNameEl.textContent = text.length > 40 ? text.slice(0, 40) + '…' : text;
+  }
+
+  history.push({ role: 'user', content: text });
+
+  const typingEl = showTyping();
+  const loadingIv = startLoading();
+
+  try {
+    const res = await fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: history, system: SYSTEM_PROMPT })
+    });
+
+    const data = await res.json();
+    stopLoading(loadingIv);
+    typingEl.remove();
+
+    if (data.error) {
+      addMsg('Er ging iets mis: ' + data.error, 'ai', true);
+      history.pop();
+    } else {
+      const html = data.content.map(b => b.text || '').join('');
+      if (html.includes('<!DOCTYPE') || html.includes('<html')) {
+        updatePreview(html);
+        history.push({ role: 'assistant', content: html });
+        downloadBtn.disabled = false;
+        const isUpdate = history.length > 3;
+        addMsg(isUpdate
+          ? 'Klaar! Wat wil je nog aanpassen?'
+          : 'Je website is klaar! Je kunt hem verder aanpassen — zeg maar wat je wilt veranderen.',
+          'ai');
+      } else {
+        addMsg('Probeer het opnieuw met een andere beschrijving.', 'ai', true);
+        history.pop();
+      }
+    }
+  } catch (err) {
+    stopLoading(loadingIv);
+    typingEl.remove();
+    addMsg('Verbindingsfout. Probeer het opnieuw.', 'ai', true);
+    history.pop();
+  }
+
+  sendBtn.disabled = false;
+  inputEl.disabled = false;
+  inputEl.focus();
+}
+
+function quickStart(text) {
+  inputEl.value = text;
+  sendMessage(text);
+}
+
+function newSite() {
+  history = [];
+  currentHTML = '';
+  siteName = 'jouw-website';
+  urlText.textContent = 'jouw-website.html';
+  siteNameEl.textContent = 'Nieuwe website';
+  downloadBtn.disabled = true;
+  iframe.style.display = 'none';
+  iframe.srcdoc = '';
+  emptyState.style.display = 'flex';
+  messagesEl.innerHTML = '<div class="msg ai">Hoi! Beschrijf de website die je wilt maken. Typ hieronder wat je in gedachten hebt.</div>';
+  inputEl.value = '';
+  inputEl.focus();
+}
+
+function downloadSite() {
+  if (!currentHTML) return;
+  const blob = new Blob([currentHTML], { type: 'text/html' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = siteName + '.html';
+  a.click();
+}
+
+// Suggestion chips
+document.querySelectorAll('.sugg').forEach(btn => {
+  btn.addEventListener('click', () => sendMessage(btn.dataset.text));
+});
+
+// Input auto-resize + enter to send
+inputEl.addEventListener('input', () => {
+  inputEl.style.height = 'auto';
+  inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + 'px';
+});
+
+inputEl.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+});
+</script>
+
+</body>
+</html>
