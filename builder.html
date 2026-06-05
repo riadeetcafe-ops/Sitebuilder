@@ -469,29 +469,33 @@
 </div>
 
 <script>
-const QUESTIONS_PROMPT = `Je bent een vriendelijke webdesign-assistent. Een gebruiker wil een website laten maken.
-Stel precies 2-3 korte, gerichte vragen om de belangrijkste details te verzamelen voordat je begint.
-Vraag altijd naar: de bedrijfsnaam/naam, de gewenste stijl of kleuren, en de belangrijkste content of secties.
-Schrijf de vragen als een korte, vriendelijke tekst — geen opsomming met nummers. Houd het beknopt (max 3 zinnen).
-Genereer GEEN HTML. Stel alleen vragen.`;
+const QUESTIONS_PROMPT = `You are a friendly web design assistant. A user wants a website built.
+IMPORTANT: Always detect the language the user is writing in and reply in that exact same language.
+Ask exactly 2-3 short, focused questions to gather the key details before you start building.
+Always ask about: the business/site name, preferred style or colors, and the main content or sections needed.
+Write the questions as a short, friendly message — no numbered lists. Keep it brief (max 3 sentences).
+Do NOT generate any HTML. Only ask questions.`;
 
-const BUILD_PROMPT = `Je bent een expert webdesigner. Op basis van de volledige gesprekgeschiedenis (inclusief de antwoorden van de gebruiker op jouw vragen) genereer je ALLEEN een complete, prachtige HTML-pagina. Geen uitleg, geen markdown, geen codeblokken.
+const BUILD_PROMPT = `You are an expert web designer. Based on the full conversation history (including the user's answers to your questions), generate ONLY a complete, beautiful HTML page. No explanation, no markdown, no code blocks.
 
-Begin direct met <!DOCTYPE html>.
+IMPORTANT: Always detect the language the user has been writing in and use that language for ALL text content in the generated website (navigation, headings, body text, footer, etc.).
 
-Eisen:
-- Gebruik Google Fonts (laad via @import in <style>)
-- Alle CSS inline in een <style> tag
-- Prachtig, professioneel en modern design
-- Gebruik de opgegeven kleuren/stijl en bedrijfsnaam van de gebruiker
-- Bevat: navigatiebalk, hero sectie, 2-3 content secties, footer
-- Subtiele CSS-animaties en hover-effecten
-- Volledig responsive met media queries
-- Realistische content op basis van alle verstrekte details
-- Geen externe afbeeldingen — gebruik CSS-gradiënten, SVG of emoji
-- Moet eruitzien als een echte, afgewerkte website
+Start directly with <!DOCTYPE html>.
 
-Bij aanpassingen: geef de COMPLETE bijgewerkte HTML terug.`;
+Requirements:
+- Load Google Fonts via @import inside a <style> tag
+- All CSS inline in a <style> tag
+- Beautiful, professional and modern design
+- Use the colors/style and business name provided by the user
+- Include: navigation bar, hero section, 2-3 content sections, footer
+- Subtle CSS animations and hover effects
+- Fully responsive with media queries
+- Realistic content based on all provided details
+- No external images — use CSS gradients, SVG or emoji
+- Must look like a real, finished website
+
+You MUST output the complete HTML immediately — do not ask any more questions.
+For updates: return the COMPLETE updated HTML.`;
 
 let history = [];
 let currentHTML = '';
@@ -604,7 +608,7 @@ async function sendMessage(overrideText) {
     typingEl.remove();
 
     if (data.error) {
-      addMsg('Er ging iets mis: ' + data.error, 'ai', true);
+      addMsg('⚠️ ' + data.error, 'ai', true);
       history.pop();
     } else {
       const responseText = data.content.map(b => b.text || '').join('');
@@ -614,10 +618,9 @@ async function sendMessage(overrideText) {
         addMsg(responseText, 'ai');
         history.push({ role: 'assistant', content: responseText });
         phase = 'building';
-        inputEl.placeholder = 'Beantwoord de vragen hierboven...';
       } else if (responseText.includes('<!DOCTYPE') || responseText.includes('<html')) {
         // AI returned HTML — render it
-        if (history.length <= 4) {
+        if (history.filter(m => m.role === 'assistant' && (m.content.includes('<!DOCTYPE') || m.content.includes('<html'))).length === 0) {
           // First build: set site name from the original description
           const firstUserMsg = history[0]?.content || text;
           siteName = slugify(firstUserMsg);
@@ -628,20 +631,17 @@ async function sendMessage(overrideText) {
         history.push({ role: 'assistant', content: responseText });
         downloadBtn.disabled = false;
         const isUpdate = history.filter(m => m.role === 'assistant' && (m.content.includes('<!DOCTYPE') || m.content.includes('<html'))).length > 1;
-        addMsg(isUpdate
-          ? 'Klaar! Wat wil je nog aanpassen?'
-          : 'Je website is klaar! Je kunt hem verder aanpassen — zeg maar wat je wilt veranderen.',
-          'ai');
-        inputEl.placeholder = 'Pas je website aan...';
+        addMsg(isUpdate ? '✓' : '✓', 'ai', true);
       } else {
-        addMsg('Probeer het opnieuw met een andere beschrijving.', 'ai', true);
+        // Build phase returned text instead of HTML — treat as error, don't push to history
+        addMsg('⚠️', 'ai', true);
         history.pop();
       }
     }
   } catch (err) {
     stopLoading(loadingIv);
     typingEl.remove();
-    addMsg('Verbindingsfout. Probeer het opnieuw.', 'ai', true);
+    addMsg('⚠️', 'ai', true);
     history.pop();
   }
 
