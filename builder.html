@@ -565,12 +565,12 @@ function slugify(text) {
 }
 
 function updatePreview(html) {
-  iframe.style.display = 'block';
-  emptyState.style.display = 'none';
-  currentHTML = html;
   iframe.contentDocument.open();
   iframe.contentDocument.write(html);
   iframe.contentDocument.close();
+  iframe.style.display = 'block';
+  emptyState.style.display = 'none';
+  currentHTML = html;
 }
 
 async function sendMessage(overrideText) {
