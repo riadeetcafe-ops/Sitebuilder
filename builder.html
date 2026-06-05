@@ -469,38 +469,59 @@
 </div>
 
 <script>
-const QUESTIONS_PROMPT = `You are a friendly web design assistant. A user wants a website built.
-IMPORTANT: Always detect the language the user is writing in and reply in that exact same language.
-Ask exactly 2-3 short, focused questions to gather the key details before you start building.
-Always ask about: the business/site name, preferred style or colors, and the main content or sections needed.
-Write the questions as a short, friendly message — no numbered lists. Keep it brief (max 3 sentences).
-Do NOT generate any HTML. Only ask questions.`;
+const SYSTEM_PROMPT = `You are a smart, friendly website-building assistant. You help anyone — regardless of language — create a beautiful website through natural conversation.
 
-const BUILD_PROMPT = `You are an expert web designer. Based on the full conversation history (including the user's answers to your questions), generate ONLY a complete, beautiful HTML page. No explanation, no markdown, no code blocks.
+LANGUAGE RULE: Always detect the language the user writes in and respond in that exact language throughout the entire conversation. If they write Dutch, respond Dutch. English → English. Arabic → Arabic. Turkish → Turkish. French → French. Spanish → Spanish. Never switch languages unless the user does.
 
-IMPORTANT: Always detect the language the user has been writing in and use that language for ALL text content in the generated website (navigation, headings, body text, footer, etc.).
+YOUR BEHAVIOR DEPENDS ON THE CONVERSATION STAGE:
 
+──────────────────────────────────────────
+STAGE 1 — FIRST MESSAGE (no website built yet)
+──────────────────────────────────────────
+When the user sends their first message describing what they want, do NOT generate HTML yet.
+Instead, ask 2-3 short, smart questions in the user's language to gather what you need.
+Be context-aware: a restaurant owner needs different info than a photographer or a personal trainer.
+Always try to learn: (1) the exact business/site name, (2) desired look & feel or colors, (3) the most important content or sections.
+Keep it warm and brief — max 3 sentences. No numbered lists.
+
+──────────────────────────────────────────
+STAGE 2 — AFTER QUESTIONS ARE ANSWERED (build the site)
+──────────────────────────────────────────
+Once the user has answered your questions, immediately generate a complete, beautiful HTML website.
+Output ONLY raw HTML — no explanations, no markdown, no code fences.
 Start directly with <!DOCTYPE html>.
 
-Requirements:
-- Load Google Fonts via @import inside a <style> tag
-- All CSS inline in a <style> tag
-- Beautiful, professional and modern design
-- Use the colors/style and business name provided by the user
-- Include: navigation bar, hero section, 2-3 content sections, footer
+HTML requirements:
+- Google Fonts loaded via @import in a <style> tag
+- All CSS in a single <style> tag (no external stylesheets)
+- Beautiful, modern, professional design tailored to the business type
+- Use the exact business name, colors, and style the user specified
+- Sections: navigation bar, hero, 2-3 relevant content sections, footer
 - Subtle CSS animations and hover effects
-- Fully responsive with media queries
-- Realistic content based on all provided details
-- No external images — use CSS gradients, SVG or emoji
-- Must look like a real, finished website
+- Fully responsive (mobile-first with media queries)
+- All website text content in the user's language
+- Realistic, specific content — not generic placeholder text
+- No external images — use CSS gradients, SVG shapes, or emoji
+- Must look like a real finished website, not a template
 
-You MUST output the complete HTML immediately — do not ask any more questions.
-For updates: return the COMPLETE updated HTML.`;
+──────────────────────────────────────────
+STAGE 3 — AFTER THE WEBSITE EXISTS (follow-up)
+──────────────────────────────────────────
+After a website has been generated, you can receive two types of follow-up:
+
+A) CHANGE REQUEST ("make it darker", "add a contact form", "change the font", "voeg een menu toe"):
+   → Output the COMPLETE updated HTML from scratch. Same rules as Stage 2. No explanation.
+
+B) QUESTION ("how do I add a booking system?", "what is a good color for a bakery?", "kan ik dit zelf hosten?"):
+   → Answer helpfully in plain text in the user's language. Be concise and practical.
+   → Do NOT output HTML for questions — only for change requests.
+
+Use your judgment: if the message asks for a visual change or new feature on the site → regenerate HTML. If it's a how-to question, advice, or anything conversational → answer in text.`;
 
 let history = [];
 let currentHTML = '';
-let siteName = 'jouw-website';
-let phase = 'questions'; // 'questions' | 'building'
+let siteName = 'your-website';
+let siteBuilt = false;
 
 // Check for startPrompt from landing page
 window.addEventListener('load', () => {
@@ -592,15 +613,11 @@ async function sendMessage(overrideText) {
   const typingEl = showTyping();
   const loadingIv = startLoading();
 
-  // Determine which system prompt and phase to use
-  const isGathering = phase === 'questions';
-  const systemPrompt = isGathering ? QUESTIONS_PROMPT : BUILD_PROMPT;
-
   try {
     const res = await fetch('/api/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages: history, system: systemPrompt })
+      body: JSON.stringify({ messages: history, system: SYSTEM_PROMPT })
     });
 
     const data = await res.json();
@@ -612,30 +629,22 @@ async function sendMessage(overrideText) {
       history.pop();
     } else {
       const responseText = data.content.map(b => b.text || '').join('');
+      history.push({ role: 'assistant', content: responseText });
 
-      if (isGathering) {
-        // AI asked its questions — show them and switch to building phase
-        addMsg(responseText, 'ai');
-        history.push({ role: 'assistant', content: responseText });
-        phase = 'building';
-      } else if (responseText.includes('<!DOCTYPE') || responseText.includes('<html')) {
-        // AI returned HTML — render it
-        if (history.filter(m => m.role === 'assistant' && (m.content.includes('<!DOCTYPE') || m.content.includes('<html'))).length === 0) {
-          // First build: set site name from the original description
+      if (responseText.includes('<!DOCTYPE') || responseText.includes('<html')) {
+        // AI returned a website — render it
+        if (!siteBuilt) {
           const firstUserMsg = history[0]?.content || text;
           siteName = slugify(firstUserMsg);
           urlText.textContent = siteName + '.html';
           siteNameEl.textContent = firstUserMsg.length > 40 ? firstUserMsg.slice(0, 40) + '…' : firstUserMsg;
+          siteBuilt = true;
         }
         updatePreview(responseText);
-        history.push({ role: 'assistant', content: responseText });
         downloadBtn.disabled = false;
-        const isUpdate = history.filter(m => m.role === 'assistant' && (m.content.includes('<!DOCTYPE') || m.content.includes('<html'))).length > 1;
-        addMsg(isUpdate ? '✓' : '✓', 'ai', true);
       } else {
-        // Build phase returned text instead of HTML — treat as error, don't push to history
-        addMsg('⚠️', 'ai', true);
-        history.pop();
+        // AI returned a text response (questions or follow-up answer) — show it
+        addMsg(responseText, 'ai');
       }
     }
   } catch (err) {
@@ -658,10 +667,10 @@ function quickStart(text) {
 function newSite() {
   history = [];
   currentHTML = '';
-  siteName = 'jouw-website';
-  phase = 'questions';
-  urlText.textContent = 'jouw-website.html';
-  siteNameEl.textContent = 'Nieuwe website';
+  siteName = 'your-website';
+  siteBuilt = false;
+  urlText.textContent = 'your-website.html';
+  siteNameEl.textContent = 'New website';
   downloadBtn.disabled = true;
   iframe.style.display = 'none';
   iframe.contentDocument.open();
