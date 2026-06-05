@@ -450,7 +450,7 @@
     </div>
     <div id="loading-bar"><div id="loading-fill"></div></div>
     <div id="preview-content">
-      <iframe id="preview-iframe" sandbox="allow-scripts" title="Website preview"></iframe>
+    <iframe id="preview-iframe" title="Website preview"></iframe>
       <div id="empty-state">
         <div class="empty-icon">🌐</div>
         <h3>Wat wil je maken?</h3>
@@ -558,7 +558,9 @@ function slugify(text) {
 }
 
 function updatePreview(html) {
-  iframe.srcdoc = html;
+  const blob = new Blob([html], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  iframe.src = url;
   iframe.style.display = 'block';
   emptyState.style.display = 'none';
   currentHTML = html;
