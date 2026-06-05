@@ -565,12 +565,12 @@ function slugify(text) {
 }
 
 function updatePreview(html) {
-  const blob = new Blob([html], { type: 'text/html' });
-  const url = URL.createObjectURL(blob);
-  iframe.src = url;
   iframe.style.display = 'block';
   emptyState.style.display = 'none';
   currentHTML = html;
+  iframe.contentDocument.open();
+  iframe.contentDocument.write(html);
+  iframe.contentDocument.close();
 }
 
 async function sendMessage(overrideText) {
@@ -664,7 +664,9 @@ function newSite() {
   siteNameEl.textContent = 'Nieuwe website';
   downloadBtn.disabled = true;
   iframe.style.display = 'none';
-  iframe.srcdoc = '';
+  iframe.contentDocument.open();
+  iframe.contentDocument.write('');
+  iframe.contentDocument.close();
   emptyState.style.display = 'flex';
   messagesEl.innerHTML = '<div class="msg ai">Hoi! Vertel me wat voor website je wilt maken en ik stel je een paar snelle vragen voordat we beginnen.</div>';
   inputEl.value = '';
