@@ -415,7 +415,7 @@
       <h2>Assistent</h2>
     </div>
     <div id="messages">
-      <div class="msg ai">Hoi! Beschrijf de website die je wilt maken. Typ hieronder wat je in gedachten hebt.</div>
+      <div class="msg ai">Hoi! Vertel me wat voor website je wilt maken en ik stel je een paar snelle vragen voordat we beginnen.</div>
     </div>
     <div id="suggestions">
       <button class="sugg" data-text="Maak de kleuren donkerder">Donkerder</button>
@@ -469,7 +469,13 @@
 </div>
 
 <script>
-const SYSTEM_PROMPT = `Je bent een expert webdesigner. De gebruiker beschrijft een website en jij genereert ALLEEN een complete, prachtige HTML-pagina. Geen uitleg, geen markdown, geen codeblokken.
+const QUESTIONS_PROMPT = `Je bent een vriendelijke webdesign-assistent. Een gebruiker wil een website laten maken.
+Stel precies 2-3 korte, gerichte vragen om de belangrijkste details te verzamelen voordat je begint.
+Vraag altijd naar: de bedrijfsnaam/naam, de gewenste stijl of kleuren, en de belangrijkste content of secties.
+Schrijf de vragen als een korte, vriendelijke tekst — geen opsomming met nummers. Houd het beknopt (max 3 zinnen).
+Genereer GEEN HTML. Stel alleen vragen.`;
+
+const BUILD_PROMPT = `Je bent een expert webdesigner. Op basis van de volledige gesprekgeschiedenis (inclusief de antwoorden van de gebruiker op jouw vragen) genereer je ALLEEN een complete, prachtige HTML-pagina. Geen uitleg, geen markdown, geen codeblokken.
 
 Begin direct met <!DOCTYPE html>.
 
@@ -477,11 +483,11 @@ Eisen:
 - Gebruik Google Fonts (laad via @import in <style>)
 - Alle CSS inline in een <style> tag
 - Prachtig, professioneel en modern design
-- Onderscheidend kleurenpalet (niet generiek blauw/wit)
+- Gebruik de opgegeven kleuren/stijl en bedrijfsnaam van de gebruiker
 - Bevat: navigatiebalk, hero sectie, 2-3 content secties, footer
 - Subtiele CSS-animaties en hover-effecten
 - Volledig responsive met media queries
-- Realistische placeholder-content op basis van de beschrijving
+- Realistische content op basis van alle verstrekte details
 - Geen externe afbeeldingen — gebruik CSS-gradiënten, SVG of emoji
 - Moet eruitzien als een echte, afgewerkte website
 
@@ -490,6 +496,7 @@ Bij aanpassingen: geef de COMPLETE bijgewerkte HTML terug.`;
 let history = [];
 let currentHTML = '';
 let siteName = 'jouw-website';
+let phase = 'questions'; // 'questions' | 'building'
 
 // Check for startPrompt from landing page
 window.addEventListener('load', () => {
@@ -576,22 +583,20 @@ async function sendMessage(overrideText) {
   addMsg(text, 'user');
   if (!overrideText) { inputEl.value = ''; inputEl.style.height = 'auto'; }
 
-  if (history.length === 0) {
-    siteName = slugify(text);
-    urlText.textContent = siteName + '.html';
-    siteNameEl.textContent = text.length > 40 ? text.slice(0, 40) + '…' : text;
-  }
-
   history.push({ role: 'user', content: text });
 
   const typingEl = showTyping();
   const loadingIv = startLoading();
 
+  // Determine which system prompt and phase to use
+  const isGathering = phase === 'questions';
+  const systemPrompt = isGathering ? QUESTIONS_PROMPT : BUILD_PROMPT;
+
   try {
     const res = await fetch('/api/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages: history, system: SYSTEM_PROMPT })
+      body: JSON.stringify({ messages: history, system: systemPrompt })
     });
 
     const data = await res.json();
@@ -602,16 +607,32 @@ async function sendMessage(overrideText) {
       addMsg('Er ging iets mis: ' + data.error, 'ai', true);
       history.pop();
     } else {
-      const html = data.content.map(b => b.text || '').join('');
-      if (html.includes('<!DOCTYPE') || html.includes('<html')) {
-        updatePreview(html);
-        history.push({ role: 'assistant', content: html });
+      const responseText = data.content.map(b => b.text || '').join('');
+
+      if (isGathering) {
+        // AI asked its questions — show them and switch to building phase
+        addMsg(responseText, 'ai');
+        history.push({ role: 'assistant', content: responseText });
+        phase = 'building';
+        inputEl.placeholder = 'Beantwoord de vragen hierboven...';
+      } else if (responseText.includes('<!DOCTYPE') || responseText.includes('<html')) {
+        // AI returned HTML — render it
+        if (history.length <= 4) {
+          // First build: set site name from the original description
+          const firstUserMsg = history[0]?.content || text;
+          siteName = slugify(firstUserMsg);
+          urlText.textContent = siteName + '.html';
+          siteNameEl.textContent = firstUserMsg.length > 40 ? firstUserMsg.slice(0, 40) + '…' : firstUserMsg;
+        }
+        updatePreview(responseText);
+        history.push({ role: 'assistant', content: responseText });
         downloadBtn.disabled = false;
-        const isUpdate = history.length > 3;
+        const isUpdate = history.filter(m => m.role === 'assistant' && (m.content.includes('<!DOCTYPE') || m.content.includes('<html'))).length > 1;
         addMsg(isUpdate
           ? 'Klaar! Wat wil je nog aanpassen?'
           : 'Je website is klaar! Je kunt hem verder aanpassen — zeg maar wat je wilt veranderen.',
           'ai');
+        inputEl.placeholder = 'Pas je website aan...';
       } else {
         addMsg('Probeer het opnieuw met een andere beschrijving.', 'ai', true);
         history.pop();
@@ -638,14 +659,16 @@ function newSite() {
   history = [];
   currentHTML = '';
   siteName = 'jouw-website';
+  phase = 'questions';
   urlText.textContent = 'jouw-website.html';
   siteNameEl.textContent = 'Nieuwe website';
   downloadBtn.disabled = true;
   iframe.style.display = 'none';
   iframe.srcdoc = '';
   emptyState.style.display = 'flex';
-  messagesEl.innerHTML = '<div class="msg ai">Hoi! Beschrijf de website die je wilt maken. Typ hieronder wat je in gedachten hebt.</div>';
+  messagesEl.innerHTML = '<div class="msg ai">Hoi! Vertel me wat voor website je wilt maken en ik stel je een paar snelle vragen voordat we beginnen.</div>';
   inputEl.value = '';
+  inputEl.placeholder = 'Beschrijf je website...';
   inputEl.focus();
 }
 
